@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const turf = require("@turf/turf");
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 app.use(bodyParser.json({ limit: "20mb" }));
@@ -430,8 +431,56 @@ const lines = [
   // Add the remaining lines here
 ];
 
+const users = [
+  { username: "admin", password: "password123", token: null },
+  // Add more user data if needed
+];
+
+// Middleware to validate the authentication header
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // Check if the auth header exists and is correctly formatted
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  // Extract the token from the header
+  const token = authHeader.split(" ")[1];
+
+  // Simulated token verification logic
+  // Replace this with your actual authentication mechanism
+  const user = users.find((u) => u.token === token);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  // Store the authenticated user in the request object
+  req.user = user;
+
+  next();
+};
+
+// POST endpoint for user login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+
+  // Simulated authentication logic
+  // Replace this with your actual authentication mechanism
+  const user = users.find((u) => u.username === username && u.password === password);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid username or password" });
+  }
+
+  // Generate a token and assign it to the user
+  const token = uuidv4();
+  user.token = token;
+
+  res.json({ token });
+});
+
 // POST endpoint for finding line intersections
-app.post("/find-intersections", (req, res) => {
+app.post("/find-intersections", authenticate, (req, res) => {
   if (!req.body || !req.body.type || !req.body.coordinates) {
     return res.status(400).json({ error: "Invalid request body" });
   }
